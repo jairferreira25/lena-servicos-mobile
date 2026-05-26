@@ -28,7 +28,7 @@ jobs:
       - name: Build APK
         env:
           _JAVA_OPTIONS: "-Dfile.encoding=UTF-8"
-        run: cd mobile_app && buildozer android debug 2>&1
+        run: buildozer android debug 2>&1
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:

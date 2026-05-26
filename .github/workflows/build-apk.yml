@@ -18,8 +18,17 @@ jobs:
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
           pip install --upgrade buildozer cython virtualenv
+      - name: Aceitar licencas Android
+        run: |
+          SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $SDK_DIR/licenses
+          echo "8933bad161af4178b1185d1a7d4e3e5c2e7d8c6a" > $SDK_DIR/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $SDK_DIR/licenses/android-sdk-preview-license
+          echo "d975f751698a77b662f1254ddbeed3901e976f5a" > $SDK_DIR/licenses/intel-android-extra-license
       - name: Build APK
-        run: buildozer android debug 2>&1
+        env:
+          _JAVA_OPTIONS: "-Dfile.encoding=UTF-8"
+        run: cd mobile_app && buildozer android debug 2>&1
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:

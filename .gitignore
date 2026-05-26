@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+bin/
+.buildozer/
+.dependencies/
+*.log
+.DS_Store

@@ -19,6 +19,8 @@ android.copy_libs = 1
 android.archs = armeabi-v7a, arm64-v8a
 android.add_src = .
 
+p4a.branch = develop
+
 [buildozer]
 log_level = 2
 warn_on_root = 1

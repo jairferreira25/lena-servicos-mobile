@@ -31,6 +31,11 @@ jobs:
           rm -rf /tmp/cmdline-tools /tmp/cmdline-tools.zip
           # Aceitar licencas
           yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK_DIR --licenses 2>&1 || true
+          # Criar link para o caminho antigo que o buildozer espera
+          mkdir -p $SDK_DIR/tools/bin
+          ln -sf $SDK_DIR/cmdline-tools/latest/bin/sdkmanager $SDK_DIR/tools/bin/sdkmanager
+          # Instalar platform-tools e build-tools
+          yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.2" "platforms;android-33" 2>&1 || true
       - name: Build APK
         env:
           _JAVA_OPTIONS: "-Dfile.encoding=UTF-8"

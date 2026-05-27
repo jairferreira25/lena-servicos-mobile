@@ -19,7 +19,7 @@ android.copy_libs = 1
 android.archs = armeabi-v7a, arm64-v8a
 android.add_src = .
 
-p4a.branch = release-2024.08.28
+p4a.branch = v2026.05.09
 
 [buildozer]
 log_level = 2

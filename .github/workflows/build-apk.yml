@@ -21,10 +21,16 @@ jobs:
       - name: Aceitar licencas Android
         run: |
           SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $SDK_DIR/licenses
-          echo "8933bad161af4178b1185d1a7d4e3e5c2e7d8c6a" > $SDK_DIR/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $SDK_DIR/licenses/android-sdk-preview-license
-          echo "d975f751698a77b662f1254ddbeed3901e976f5a" > $SDK_DIR/licenses/intel-android-extra-license
+          CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          # Baixar e extrair cmdline-tools
+          mkdir -p $SDK_DIR
+          curl -sL "$CMDLINE_TOOLS_URL" -o /tmp/cmdline-tools.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+          mkdir -p $SDK_DIR/cmdline-tools/latest
+          mv /tmp/cmdline-tools/cmdline-tools/* $SDK_DIR/cmdline-tools/latest/
+          rm -rf /tmp/cmdline-tools /tmp/cmdline-tools.zip
+          # Aceitar licencas
+          yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK_DIR --licenses 2>&1 || true
       - name: Build APK
         env:
           _JAVA_OPTIONS: "-Dfile.encoding=UTF-8"

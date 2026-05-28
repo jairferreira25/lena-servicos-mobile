@@ -17,7 +17,7 @@ android.gradle_dependencies = androidx.core:core:1.9.0
 android.enable_androidx = True
 android.copy_libs = 1
 android.archs = armeabi-v7a, arm64-v8a
-android.add_src = .
+# android.add_src = .
 
 p4a.branch = v2026.05.09
 

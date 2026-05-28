@@ -1,15 +1,10 @@
 import os, sys, datetime
 os.environ['KIVY_NO_ARGS'] = '1'
 
-from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.metrics import dp
 from kivy.utils import platform
-
-if platform == 'android':
-    from android.permissions import request_permissions, Permission
-    request_permissions([Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
-    Window.softinput_mode = 'below_target'
+from kivy.uix.gridlayout import GridLayout
 
 from kivymd.app import MDApp
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
@@ -21,19 +16,20 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.list import OneLineListItem
 from kivymd.uix.snackbar import MDSnackbar
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.scrollview import MDScrollView
 
 import sqlite3
 
-# ==================== DATABASE ====================
+_db_path = None
+
+def set_db_path(path):
+    global _db_path; _db_path = path
+
 def get_db_path():
-    if platform == 'android':
-        from android.storage import primary_external_storage_path
-        base = primary_external_storage_path()
-        db_dir = os.path.join(base, 'Lena Servicos')
-    else:
-        db_dir = os.path.join(os.path.expanduser('~'), 'Lena Servicos')
+    global _db_path
+    if _db_path: return _db_path
+    app = MDApp.get_running_app()
+    db_dir = app.user_data_dir if platform == 'android' else os.path.join(os.path.expanduser('~'), 'Lena Servicos')
     os.makedirs(db_dir, exist_ok=True)
     return os.path.join(db_dir, 'dados.db')
 
@@ -50,8 +46,6 @@ def init_db():
     conn.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('valor_manha', '120.00')")
     conn.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('valor_noite', '100.00')")
     conn.commit(); conn.close()
-
-init_db()
 
 def obter_config(chave, padrao=None):
     try:
@@ -116,16 +110,7 @@ def registrar_turno(nome_func, turno, data=None):
 
 def listar_turnos(di=None, df=None):
     conn = get_db()
-    q = "SELECT t.id, f.nome as func, t.turno, t.data, t.valor FROM turnos t JOIN funcionarios f ON t.funcionario_id = f.id"
-    p = []
-    if di: q += " AND t.data>=?"; p.append(di)
-    if df: q += " AND t.data<=?"; p.append(df)
-    q = q.replace("WHERE AND", "WHERE") if "WHERE AND" in q else q
-    if 'WHERE' not in q and (di or df): q = q.replace("JOIN", "JOIN") 
-    if di or df: q = q.split("AND")[0] + "WHERE " + " AND ".join([f"t.data>=?"]if di else[] + [f"t.data<=?"]if df else[]) 
-    # Fix query
-    conds = []
-    params = []
+    conds = []; params = []
     if di: conds.append("t.data>=?"); params.append(di)
     if df: conds.append("t.data<=?"); params.append(df)
     q = "SELECT t.id, f.nome as func, t.turno, t.data, t.valor FROM turnos t JOIN funcionarios f ON t.funcionario_id = f.id"
@@ -155,9 +140,9 @@ def excluir_turno(tid):
     conn.commit(); conn.close()
 
 # ==================== RELATORIO / PDF ====================
-from fpdf import FPDF
 
 def gerar_pdf(dados, caminho=None):
+    from fpdf import FPDF
     pdf = FPDF(); pdf.add_page()
     fn = 'Helvetica'
     pdf.set_fill_color(10,10,10); pdf.rect(0,0,210,297,'F')
@@ -225,7 +210,16 @@ def gerar_pdf(dados, caminho=None):
     pdf.cell(50,6,f'R$ {dados["vt"]:.2f}',ln=True)
     pdf.ln(24)
     if not caminho:
-        pasta = '/storage/emulated/0/Lena Servicos' if platform == 'android' else os.path.join(os.path.expanduser('~'),'Lena Servicos')
+        if platform == 'android':
+            try:
+                from android.storage import primary_external_storage_path
+                base = primary_external_storage_path()
+                if base: pasta = os.path.join(base, 'Lena Servicos')
+                else: pasta = os.path.join(MDApp.get_running_app().user_data_dir, 'Lena Servicos')
+            except:
+                pasta = os.path.join(MDApp.get_running_app().user_data_dir, 'Lena Servicos')
+        else:
+            pasta = os.path.join(os.path.expanduser('~'), 'Lena Servicos')
         os.makedirs(pasta, exist_ok=True)
         caminho = os.path.join(pasta, f"Relatorio_{dados['nome'].replace(' ','_')}.pdf")
     pdf.output(caminho)
@@ -244,10 +238,7 @@ def copiar_wpp(dados):
         from plyer import clipboard
         clipboard.copy(texto)
     except:
-        try:
-            import pyperclip
-            pyperclip.copy(texto)
-        except: pass
+        pass
     return texto
 
 # ==================== TELAS ====================
@@ -387,15 +378,31 @@ class ConfigScreen(Screen):
 class App(MDApp):
     def __init__(self,**kwargs):
         super().__init__(**kwargs); self.funcs=[]
+    def on_start(self):
+        if platform == 'android':
+            try:
+                from android.permissions import request_permissions, Permission
+                request_permissions([Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
+            except:
+                pass
     def build(self):
+        from kivy.core.window import Window
+        Window.softinput_mode = 'below_target'
         self.theme_cls.theme_style='Dark'; self.theme_cls.primary_palette='Yellow'
+        if platform == 'android':
+            db_dir = self.user_data_dir
+        else:
+            db_dir = os.path.join(os.path.expanduser('~'), 'Lena Servicos')
+        os.makedirs(db_dir, exist_ok=True)
+        set_db_path(os.path.join(db_dir, 'dados.db'))
+        init_db()
         sm=ScreenManager(transition=SlideTransition())
         # Menu
         m=MenuScreen(name='menu')
         box=MDBoxLayout(orientation='vertical',md_bg_color=(0.04,0.04,0.04,1),spacing=dp(10),padding=dp(20))
         box.add_widget(MDLabel(text='LENA SERVICOS',font_style='H4',bold=True,halign='center',theme_text_color='Custom',text_color=(0.83,0.69,0.22,1),size_hint_y=None,height=dp(50)))
         box.add_widget(MDLabel(text='Gestao de Funcionarios',font_style='Body1',halign='center',theme_text_color='Custom',text_color=(0.63,0.63,0.63,1),size_hint_y=None,height=dp(30)))
-        grid=MDGridLayout(cols=2,spacing=dp(15),padding=dp(5),adaptive_height=True,pos_hint={'center_y':0.5})
+        grid=GridLayout(cols=2,spacing=dp(15),padding=dp(5),adaptive_height=True,pos_hint={'center_y':0.5})
         for icone,label,sub,scr in [
             ('👥','Cadastrar','Funcionario','cadastro'),('📝','Registrar','Turno','registrar'),
             ('📊','Relatorio','Pagamentos','relatorio'),('✏️','Alterar','Registro','editar')]:

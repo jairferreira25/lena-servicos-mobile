@@ -5,7 +5,7 @@ package.domain = org.lena
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,otf
 version = 1.0.0
-requirements = python3,kivy,kivymd==1.1.1,fpdf2,plyer,pyperclip,Pillow,pyjnius,android
+requirements = python3,kivy,kivymd==1.1.1,fpdf2,plyer,Pillow,pyjnius,android
 orientation = portrait
 fullscreen = 0
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,POST_NOTIFICATIONS

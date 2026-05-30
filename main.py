@@ -1,4 +1,25 @@
-import os, sys, datetime
+import os, sys, datetime, traceback
+
+_ERROR_LOG = None
+
+def _log_error(msg):
+    global _ERROR_LOG
+    try:
+        if not _ERROR_LOG:
+            if 'EXTERNAL_STORAGE' in os.environ:
+                _ERROR_LOG = os.path.join(os.environ['EXTERNAL_STORAGE'], 'Lena_Servicos_Error.log')
+            else:
+                _ERROR_LOG = '/storage/emulated/0/Lena_Servicos_Error.log'
+        with open(_ERROR_LOG, 'a') as f:
+            f.write(f'{datetime.datetime.now()}: {msg}\n')
+    except:
+        pass
+
+def excepthook(tp, val, tb):
+    _log_error(f'UNHANDLED: {tp.__name__}: {val}\n{"".join(traceback.format_exception(tp, val, tb))}')
+
+sys.excepthook = excepthook
+
 os.environ['KIVY_NO_ARGS'] = '1'
 
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
@@ -389,13 +410,16 @@ class App(MDApp):
         from kivy.core.window import Window
         Window.softinput_mode = 'below_target'
         self.theme_cls.theme_style='Dark'; self.theme_cls.primary_palette='Yellow'
-        if platform == 'android':
-            db_dir = self.user_data_dir
-        else:
-            db_dir = os.path.join(os.path.expanduser('~'), 'Lena Servicos')
-        os.makedirs(db_dir, exist_ok=True)
-        set_db_path(os.path.join(db_dir, 'dados.db'))
-        init_db()
+        try:
+            if platform == 'android':
+                db_dir = self.user_data_dir
+            else:
+                db_dir = os.path.join(os.path.expanduser('~'), 'Lena Servicos')
+            os.makedirs(db_dir, exist_ok=True)
+            set_db_path(os.path.join(db_dir, 'dados.db'))
+            init_db()
+        except Exception as e:
+            _log_error(f'INIT FAILED: {e}\n{traceback.format_exc()}')
         sm=ScreenManager(transition=SlideTransition())
         # Menu
         m=MenuScreen(name='menu')
@@ -496,4 +520,8 @@ class App(MDApp):
         try: self.funcs=listar_funcs()
         except: self.funcs=[]
 
-if __name__=='__main__': App().run()
+if __name__=='__main__':
+    try:
+        App().run()
+    except Exception as e:
+        _log_error(f'FATAL: App().run() crashed: {e}\n{traceback.format_exc()}')
